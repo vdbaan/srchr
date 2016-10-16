@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 import os,sys
 import ConfigParser
-
+import argparse
 try:
     input = raw_input
 except NameError:
     pass
 
+version = '0.2'
 
 banner = '''
   ______   _______      ______  ____  ____  _______     
@@ -19,7 +20,20 @@ banner = '''
 
 attr = '''Based on Findsploit by 1N3 (https://github.com/1N3/findsploit)'''
 
-version = '0.1'
+help = """
+Usage: srchr [-n] [-m] [-e] [-b] ARG ...
+
+optional arguments:
+  -h    --help          Show this help message and exit
+  -n    --nmap          Search the NMap scripts
+  -e    --exploitdb     Searches the exploit db
+  -m    --metasploit    Search the Metasploit project
+  -s    --setoolkit     Search the SEToolKit project
+  -b    --browser       Launch searches in your browser
+
+The default uses: --nmap, --exploitdb, --metasploit and --setoolkit
+"""
+
 class bcolors:
     PURPLE = '\033[95m'
     CYAN = '\033[96m'
@@ -40,7 +54,19 @@ class bcolors:
     backCyan = '\033[46m'
     backWhite = '\033[47m'
 
+def header():
+    message = (bcolors.YELLOW + bcolors.BOLD +banner+ bcolors.ENDC)+ '\n'
+    message += (bcolors.RED + bcolors.BOLD +'  - v%s by S. van der Baan '%version+ bcolors.ENDC)+ '\n'
+    message += (bcolors.BLUE + bcolors.BOLD +attr+ bcolors.ENDC) 
+    return message
 
+class MyParser(argparse.ArgumentParser):
+    def format_help(self):
+        return "%s\n%s\n" % (header(), help)
+
+    def error(self, message):
+        print(self.format_help())
+        exit(1)
 
 # main status calls for print functions
 def print_special(indicator,message,spaces=''):
@@ -69,8 +95,6 @@ def print_warning(message):
 
 def print_error(message):
     print_special_error('!',message)
-
-
 
 def getTerminalSize():
     import os
@@ -114,14 +138,8 @@ def check_config():
             config.write(configfile)
     return config
 
-def help():
-    print("Usage: %s [-b] <ARG ...>"%__file__)
-    print("")
-    print("        -b       Also search in browser")
-    print("        ARG ...  One or more arguments to search for")
-    exit()
 
-def build_nmap(nmap,sargv):
+def build_search(nmap,sargv):
     result = ""
     result += "fgrep -ri %s %s"%(sargv[0],nmap)
     for arg in sargv[1:]:
@@ -129,53 +147,59 @@ def build_nmap(nmap,sargv):
     result += '|cut -d \':\' -f1|sort|uniq|grep --color=always -ie "%s"'%('\\|'.join(sargv))
     return result
 
-if __name__ == "__main__":
-    os.system('clear')
-    print (bcolors.YELLOW + bcolors.BOLD +banner+ bcolors.ENDC)
-    print (bcolors.RED + bcolors.BOLD +'  - v%s by S. van der Baan '%version+ bcolors.ENDC)
-    print (bcolors.BLUE + bcolors.BOLD +attr+ bcolors.ENDC)
-    
+def main(args):
+    print(header())
     print('')
     config = check_config()     
-    args = sys.argv
-    use_browser = False
-    if '-b' in args:
-        use_browser = True
-        args.remove('-b')
-    if (len(args) == 1):
-        help()
     (width, height) = getTerminalSize()
-    del args[0]
-    print_status('Searching for: '+' '.join(args))
-    print('')
-    print_info("Searching in NMap scripts ...")
-    print ("-" * width)
-    os.system(build_nmap(config.get('srchr','nmap-location'),args))
-    print ("-" * width)
-    print('')
-    print_info("Searching in Exploit-DB ...")
-    os.system('%s/searchsploit %s'%(config.get('srchr','exploitdb')," ".join(args)))
-    print('')
-    print_info("Searching in MetaSploit ...")
-    print ("-" * width)
-    os.system(build_nmap('%s/embedded/framework/modules'%config.get('srchr','metasploit'),args))
-    print ("-" * width)
-    print('')
-    print_info("Searching in SEToolKit ...")
-    print ("-" * width)
-    os.system(build_nmap('%s/src'%config.get('srchr','setoolkit'),args))
-    print ("-" * width)
+    args.all = not (args.nmap or args.metasploit or args.setoolkit or args.exploitdb)
+    print_status('Searching for: '+' '.join(args.terms))
+    
+    if args.all or args.nmap:
+        print('')    
+        print_info("Searching in NMap scripts ...")
+        print ("-" * width)
+        os.system(build_search(config.get('srchr','nmap-location'),args.terms))
+        print ("-" * width)
+    if args.all or args.exploitdb:
+        print('')
+        print_info("Searching in Exploit-DB ...")
+        os.system('%s/searchsploit %s'%(config.get('srchr','exploitdb')," ".join(args.terms)))
+    if args.all or args.metasploit:
+        print('')
+        print_info("Searching in MetaSploit ...")
+        print ("-" * width)
+        os.system(build_search('%s/embedded/framework/modules'%config.get('srchr','metasploit'),args.terms))
+        print ("-" * width)
+    if args.all or args.setoolkit:
+        print('')
+        print_info("Searching in SEToolKit ...")
+        print ("-" * width)
+        os.system(build_search('%s/src'%config.get('srchr','setoolkit'),args.terms))
+        print ("-" * width)
 
-    if use_browser:
+    if args.browser:
         print('')
         print_info("Making your browser search too ...")
-        os.system('xdg-open http://www.google.com/search?q=%s+exploit 1>/dev/null'%('\'%20\''.join(args)))
-        os.system('xdg-open http://www.google.com/search?q=%s+exploit+site:www.securityfocus.com 1>/dev/null'%('\'%20\''.join(args)))
-        os.system('xdg-open http://www.google.com/search?q=%s+site:0day.today 1>/dev/null'%('\'%20\''.join(args)))
-        os.system('xdg-open http://www.google.com/search?q=%s+site:www.security-database.com 1>/dev/null'%('\'%20\''.join(args)))
-        os.system('xdg-open http://www.google.com/search?q=%s+site:packetstormsecurity.com 1>/dev/null'%('%20'.join(args)))
-        os.system('xdg-open https://exploits.shodan.io?q=%s 1>/dev/null'%('\'%20\''.join(args)))
+        os.system('xdg-open http://www.google.com/search?q=%s+exploit 1>/dev/null'%('\'%20\''.join(args.terms)))
+        os.system('xdg-open http://www.google.com/search?q=%s+exploit+site:www.securityfocus.com 1>/dev/null'%('\'%20\''.join(args.terms)))
+        os.system('xdg-open http://www.google.com/search?q=%s+site:0day.today 1>/dev/null'%('\'%20\''.join(args.terms)))
+        os.system('xdg-open http://www.google.com/search?q=%s+site:www.security-database.com 1>/dev/null'%('\'%20\''.join(args.terms)))
+        os.system('xdg-open http://www.google.com/search?q=%s+site:packetstormsecurity.com 1>/dev/null'%('%20'.join(args.terms)))
+        os.system('xdg-open https://exploits.shodan.io?q=%s 1>/dev/null'%('\'%20\''.join(args.terms)))
     print('')
     print_status('Done.')
     print('')
     
+if __name__ == "__main__":
+    os.system('clear')
+    parser = MyParser()
+    parser.add_argument('terms',type=str, nargs='+')
+    parser.add_argument("-n","--nmap",action="store_true",default=False)
+    parser.add_argument("-m","--metasploit",action="store_true",default=False)
+    parser.add_argument("-e","--exploitdb",action="store_true",default=False)
+    parser.add_argument("-s","--setoolkit",action="store_true",default=False)
+    parser.add_argument("-b","--browser",action="store_true",default=False)
+
+    args = parser.parse_args()
+    main(args)        
