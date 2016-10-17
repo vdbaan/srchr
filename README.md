@@ -1,8 +1,15 @@
-#SrchR v0.1
+#SrchR v0.2
 by @vdbaan (S. van der Baan)
 
 ### About
 SrchR is a rewrite of Findsploit v1.4 (by 1N3 - https://github.com/1N3/findsploit) but then in Python. It uses a configuration file to remember where the various locations are that will be searched. This version is without copysploit or compilesploit as you should be able to do that yourselves.
+
+### Credits
+1N3 (https://github.com/1N3) - for an awesome idea
+
+### History
+0.2 - Added options to be able to target results.
+0.1 - Initial version
 
 ### Help
 ```
@@ -15,13 +22,21 @@ root@kali:/# findsploit
 | \____) | _| |  \ \_\ `.___.'\ _| |  | |_  _| |  \ \_  
  \______.'|____| |___|`.____ .'|____||____||____| |___|              
 
-  - v0.1 by S. van der Baan 
+  - v0.2 by S. van der Baan 
 Based on Findsploit by 1N3 (https://github.com/1N3/findsploit)
 
-Usage: ./srchr.py [-b] <ARG ...>
+Usage: srchr [-n] [-m] [-e] [-b] ARG ...
 
-        -b       Also search in browser
-        ARG ...  One or more arguments to search for
+optional arguments:
+  -h    --help          Show this help message and exit
+  -n    --nmap          Search the NMap scripts
+  -e    --exploitdb     Searches the exploit db
+  -m    --metasploit    Search the Metasploit project
+  -s    --setoolkit     Search the SEToolKit project
+  -b    --browser       Launch searches in your browser
+
+The default uses: --nmap, --exploitdb, --metasploit and --setoolkit
+
 
 ```
 ### Example
@@ -35,7 +50,7 @@ root@kali:/# findsploit MS08 67
 | \____) | _| |  \ \_\ `.___.'\ _| |  | |_  _| |  \ \_  
  \______.'|____| |___|`.____ .'|____||____||____| |___|              
 
-  - v0.1 by S. van der Baan 
+  - v0.2 by S. van der Baan 
 Based on Findsploit by 1N3 (https://github.com/1N3/findsploit)
 
 [*] Searching for: MS08 67
